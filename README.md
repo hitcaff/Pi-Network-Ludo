@@ -57,4 +57,6 @@ MIT License - feel free to use and modify as needed!
 ## Contact
 
 For support or inquiries, please contact us at:
-[Your Contact Information]
+- Email: hexa.bsbs9@gmail.com
+- Developer: Hitcaff
+- Social: Discord & Twitter (Coming Soon)
