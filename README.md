@@ -1,6 +1,6 @@
-# Pi Ludo & Snake Ladder
+# LUDO NOVA
 
-A blockchain-based multiplayer board game built on the Pi Network platform. Play classic Ludo and Snake & Ladder games while earning Pi cryptocurrency!
+A modern blockchain-based multiplayer board game built on the Pi Network platform. Play classic Ludo and Snake & Ladder games while earning Pi cryptocurrency!
 
 ## Features
 
@@ -45,6 +45,16 @@ To run the project locally:
 2. Open index.html in Pi Browser
 3. Start playing!
 
+## Legal
+
+- [Privacy Policy](privacy-policy.html)
+- [Terms of Service](terms-of-service.html)
+
 ## License
 
 MIT License - feel free to use and modify as needed!
+
+## Contact
+
+For support or inquiries, please contact us at:
+[Your Contact Information]

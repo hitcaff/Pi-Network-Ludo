@@ -3,13 +3,13 @@
 ## Basic Information
 
 ### App Name
-Pi Ludo & Snake Ladder
+LUDO NOVA
 
 ### Short Description
-A multiplayer board game platform featuring classic Ludo and Snake & Ladder games with Pi cryptocurrency rewards.
+A modern multiplayer board game platform featuring classic Ludo and Snake & Ladder games with Pi cryptocurrency rewards.
 
 ### Long Description
-Pi Ludo & Snake Ladder is an exciting gaming platform that combines classic board games with blockchain technology. Players can enjoy two timeless favorites - Ludo and Snake & Ladder - while earning Pi cryptocurrency rewards based on their performance.
+LUDO NOVA is an exciting gaming platform that combines classic board games with blockchain technology. Players can enjoy two timeless favorites - Ludo and Snake & Ladder - while earning Pi cryptocurrency rewards based on their performance.
 
 The platform features:
 - Two classic game modes: Ludo and Snake & Ladder
@@ -94,10 +94,10 @@ Games & Entertainment
 - Discord community
 
 ### Privacy Policy
-[Link to your privacy policy]
+https://hitcaff.github.io/Pi-Network-Ludo/privacy-policy.html
 
 ### Terms of Service
-[Link to your terms of service]
+https://hitcaff.github.io/Pi-Network-Ludo/terms-of-service.html
 
 ## Development Roadmap
 
