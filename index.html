@@ -3,14 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUDO NOVA</title>
-    <!-- Add Tailwind CSS via CDN with SRI hash for security -->
+    <title>LUDO NOVA - Modern Multiplayer Board Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Add Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Add Pi Network SDK -->
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
         body {
@@ -34,6 +30,7 @@
     </style>
 </head>
 <body class="text-white">
+    <div id="warning-banner"></div>
     <div class="game-container">
         <!-- Auth Section -->
         <div id="auth-section" class="text-center py-12">
@@ -111,6 +108,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Add warning banner
+        if (!window.Pi || !/PiBrowser/i.test(navigator.userAgent)) {
+            const warningBanner = document.createElement("div");
+            warningBanner.className = "fixed top-0 left-0 right-0 bg-yellow-500 text-black px-4 py-3 text-center font-bold";
+            warningBanner.innerHTML = `
+                <strong>⚠️ Warning:</strong> LUDO NOVA must be opened in Pi Browser to function properly. 
+                <button onclick="piNetwork.showPiBrowserInstructions()" class="ml-2 bg-black text-white px-3 py-1 rounded hover:bg-gray-800">
+                    Show Instructions
+                </button>
+            `;
+            document.getElementById("warning-banner").appendChild(warningBanner);
+        }
+    </script>
 
     <script src="pi-integration.js"></script>
     <script src="game-logic.js"></script>
