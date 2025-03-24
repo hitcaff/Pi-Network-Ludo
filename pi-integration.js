@@ -57,7 +57,7 @@ class PiNetwork {
         }
     }
 
-    async makePayment(amount) {
+    async makePayment(amount, poolType, paymentType = 'entry') {
         if (!this.isPiBrowser()) {
             this.showError("Please open this app in Pi Browser");
             return null;
@@ -69,14 +69,48 @@ class PiNetwork {
         }
 
         try {
+            const metadata = {
+                gameType: "ludo",
+                poolType: poolType,
+                paymentType: paymentType,
+                timestamp: Date.now()
+            };
+
+            const memo = paymentType === 'entry' 
+                ? `Entry fee for ${poolType} pool game`
+                : `3-day access pass for ${poolType} pool`;
+
             const payment = await this.sdk.createPayment({
                 amount: amount,
-                memo: "Game entry fee",
-                metadata: { gameType: "ludo", timestamp: Date.now() }
+                memo: memo,
+                metadata: metadata
+            }, {
+                onReadyForServerApproval: function(paymentId) {
+                    console.log('Ready for server approval:', paymentId);
+                },
+                onReadyForServerCompletion: function(paymentId, txid) {
+                    console.log('Ready for completion:', paymentId, txid);
+                },
+                onCancel: function(paymentId) {
+                    console.log('Payment cancelled:', paymentId);
+                },
+                onError: function(error, payment) {
+                    console.error('Payment error:', error);
+                }
             });
 
-            if (payment.status === "completed") {
-                this.showSuccess(`Payment of ${amount} Pi successful!`);
+            if (payment && payment.status === "completed") {
+                if (paymentType === 'access') {
+                    // Store access pass with expiry date (3 days from now)
+                    const passes = JSON.parse(localStorage.getItem('poolAccessPasses') || '{}');
+                    const expiryDate = new Date();
+                    expiryDate.setDate(expiryDate.getDate() + 3);
+                    passes[poolType] = expiryDate.toISOString();
+                    localStorage.setItem('poolAccessPasses', JSON.stringify(passes));
+                    this.showSuccess(`Access pass purchased for ${poolType} pool!`);
+                } else {
+                    this.showSuccess(`Entry fee paid for ${poolType} pool!`);
+                }
                 return payment;
             } else {
                 this.showError("Payment incomplete. Please try again.");
@@ -87,6 +121,58 @@ class PiNetwork {
             this.showError("Payment failed. Please try again.");
             return null;
         }
+    }
+
+    // Pool access and level management
+    getPlayerLevel() {
+        const progress = JSON.parse(localStorage.getItem('ludoNovaProgress') || '{}');
+        return Math.floor((progress.tokensHome || 0) / 20);
+    }
+
+    hasPoolAccess(poolType) {
+        const poolLevels = {
+            'bronze': 0,
+            'silver': 5,
+            'gold': 10,
+            'platinum': 20,
+            'diamond': 30
+        };
+
+        // Check player level
+        const playerLevel = this.getPlayerLevel();
+        if (playerLevel >= poolLevels[poolType]) {
+            return true;
+        }
+
+        // Check access pass
+        const passes = JSON.parse(localStorage.getItem('poolAccessPasses') || '{}');
+        if (passes[poolType]) {
+            const expiryDate = new Date(passes[poolType]);
+            if (expiryDate > new Date()) {
+                return true;
+            }
+            // Remove expired pass
+            delete passes[poolType];
+            localStorage.setItem('poolAccessPasses', JSON.stringify(passes));
+        }
+
+        return false;
+    }
+
+    async purchaseAccessPass(poolType) {
+        return await this.makePayment(1, poolType, 'access');
+    }
+
+    async enterPool(poolType) {
+        const poolFees = {
+            'bronze': 0.5,
+            'silver': 1,
+            'gold': 2,
+            'platinum': 5,
+            'diamond': 10
+        };
+
+        return await this.makePayment(poolFees[poolType], poolType, 'entry');
     }
 
     showError(message) {

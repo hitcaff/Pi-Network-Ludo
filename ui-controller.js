@@ -1,153 +1,314 @@
-class GameUI {
-    constructor() {
-        this.canvas = document.getElementById("gameCanvas");
-        this.ctx = this.canvas.getContext("2d");
-        this.game = null;
-        this.boardSize = 600;
-        this.setupCanvas();
+class UIController {
+    constructor(gameState) {
+        this.gameState = gameState;
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.setupEventListeners();
+        this.updatePassTimers();
+        
+        // Start timer update interval
+        setInterval(() => this.updatePassTimers(), 60000); // Update every minute
     }
 
-    setupCanvas() {
-        this.canvas.width = this.boardSize;
-        this.canvas.height = this.boardSize;
-        this.canvas.style.backgroundColor = "white";
-    }
-
-    initializeLudoBoard() {
-        this.game = new LudoGame();
-        this.game.initializeGame(4);
-        this.drawLudoBoard();
-    }
-
-    initializeSnakeLadderBoard() {
-        this.game = new SnakeLadderGame();
-        this.game.initializeGame(4);
-        this.drawSnakeLadderBoard();
-    }
-
-    drawLudoBoard() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.boardSize, this.boardSize);
-
-        // Draw board sections
-        const colors = ["red", "blue", "yellow", "green"];
-        const sectionSize = this.boardSize / 3;
-
-        colors.forEach((color, index) => {
-            const x = (index % 2) * 2 * sectionSize;
-            const y = Math.floor(index / 2) * 2 * sectionSize;
-            this.ctx.fillStyle = color;
-            this.ctx.fillRect(x, y, sectionSize, sectionSize);
+    setupEventListeners() {
+        // Pool selection
+        document.querySelectorAll('.play-pool').forEach(button => {
+            const poolType = button.dataset.pool;
+            button.addEventListener('click', () => this.handlePoolSelection(poolType));
         });
 
-        // Draw center paths
-        this.ctx.fillStyle = "white";
-        this.ctx.fillRect(sectionSize, 0, sectionSize, this.boardSize);
-        this.ctx.fillRect(0, sectionSize, this.boardSize, sectionSize);
+        // Slider navigation
+        document.getElementById('slide-left').addEventListener('click', () => {
+            const container = document.getElementById('pool-container');
+            container.scrollBy({
+                left: -container.offsetWidth,
+                behavior: 'smooth'
+            });
+        });
 
-        // Draw grid lines
-        this.ctx.strokeStyle = "#000";
-        const cellSize = sectionSize / 6;
+        document.getElementById('slide-right').addEventListener('click', () => {
+            const container = document.getElementById('pool-container');
+            container.scrollBy({
+                left: container.offsetWidth,
+                behavior: 'smooth'
+            });
+        });
 
-        // Draw vertical lines
-        for (let i = 0; i <= this.boardSize; i += cellSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(i, 0);
-            this.ctx.lineTo(i, this.boardSize);
-            this.ctx.stroke();
+        // Game controls
+        const rollDiceBtn = document.getElementById('roll-dice');
+        if (rollDiceBtn) {
+            rollDiceBtn.addEventListener('click', () => this.handleDiceRoll());
         }
 
-        // Draw horizontal lines
-        for (let i = 0; i <= this.boardSize; i += cellSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, i);
-            this.ctx.lineTo(this.boardSize, i);
-            this.ctx.stroke();
+        const leaveGameBtn = document.getElementById('leave-game');
+        if (leaveGameBtn) {
+            leaveGameBtn.addEventListener('click', () => this.handleLeaveGame());
         }
+
+        // Canvas click for token movement
+        if (this.canvas) {
+            this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => this.handleResize());
     }
 
-    drawSnakeLadderBoard() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.boardSize, this.boardSize);
+    async handlePoolSelection(poolType) {
+        if (!piNetwork.authenticated) {
+            piNetwork.showError('Please authenticate first!');
+            return;
+        }
 
-        const cellSize = this.boardSize / 10;
-
-        // Draw grid and numbers
-        for (let i = 0; i < 10; i++) {
-            for (let j = 0; j < 10; j++) {
-                const x = j * cellSize;
-                const y = (9 - i) * cellSize;
-                
-                // Draw cell
-                this.ctx.strokeStyle = "#000";
-                this.ctx.strokeRect(x, y, cellSize, cellSize);
-                
-                // Add numbers
-                const number = i * 10 + j + 1;
-                this.ctx.fillStyle = "#000";
-                this.ctx.font = "20px Arial";
-                this.ctx.fillText(number.toString(), x + cellSize/3, y + cellSize/2);
+        // Check if player meets level requirement or has access pass
+        if (!piNetwork.hasPoolAccess(poolType)) {
+            const purchase = confirm(`You need to be level ${this.gameState.getPoolRequirements(poolType)} to access this pool. Would you like to purchase a 3-day access pass for 1 Pi?`);
+            if (purchase) {
+                const payment = await piNetwork.purchaseAccessPass(poolType);
+                if (!payment) return;
+            } else {
+                return;
             }
         }
 
-        // Draw snakes
-        Object.entries(this.game.snakes).forEach(([start, end]) => {
-            this.drawSnake(parseInt(start), end);
+        // Pay entry fee and start game
+        const payment = await piNetwork.enterPool(poolType);
+        if (payment) {
+            document.getElementById('game-selection').classList.add('hidden');
+            document.getElementById('game-board').classList.remove('hidden');
+            this.initializeGame(poolType);
+        }
+    }
+
+    updatePassTimers() {
+        const passes = JSON.parse(localStorage.getItem('poolAccessPasses') || '{}');
+        const now = new Date();
+
+        Object.entries(passes).forEach(([poolType, expiryDateStr]) => {
+            const expiryDate = new Date(expiryDateStr);
+            const timerElement = document.querySelector(`[data-pool="${poolType}"]`)
+                .closest('.flex-none')
+                .querySelector('.pass-timer');
+            
+            if (expiryDate > now) {
+                const hours = Math.floor((expiryDate - now) / (1000 * 60 * 60));
+                const minutes = Math.floor(((expiryDate - now) % (1000 * 60 * 60)) / (1000 * 60));
+                
+                timerElement.classList.remove('hidden');
+                timerElement.querySelector('span').textContent = `${hours}h ${minutes}m`;
+            } else {
+                timerElement.classList.add('hidden');
+                delete passes[poolType];
+            }
         });
 
-        // Draw ladders
-        Object.entries(this.game.ladders).forEach(([start, end]) => {
-            this.drawLadder(parseInt(start), end);
+        localStorage.setItem('poolAccessPasses', JSON.stringify(passes));
+    }
+
+    initializeGame(poolType) {
+        // Set up canvas size
+        this.canvas.width = 600;
+        this.canvas.height = 600;
+
+        // Initialize game with 4 players
+        const players = [
+            { id: 'currentPlayer', name: 'You', color: 'red' },
+            { id: 'player2', name: 'Player 2', color: 'green' },
+            { id: 'player3', name: 'Player 3', color: 'yellow' },
+            { id: 'player4', name: 'Player 4', color: 'blue' }
+        ];
+
+        this.gameState.startGame(poolType, players);
+        this.renderBoard();
+    }
+
+    handleDiceRoll() {
+        if (!this.gameState.gameStarted) return;
+
+        const roll = this.gameState.rollDice();
+        if (roll) {
+            this.animateDiceRoll(roll);
+            this.highlightValidMoves(roll);
+        }
+    }
+
+    handleLeaveGame() {
+        if (confirm('Are you sure you want to leave the game? You will forfeit any potential rewards.')) {
+            this.gameState.gameStarted = false;
+            document.getElementById('game-board').classList.add('hidden');
+            document.getElementById('game-selection').classList.remove('hidden');
+        }
+    }
+
+    handleCanvasClick(event) {
+        if (!this.gameState.gameStarted) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Convert click coordinates to board position
+        const clickedPosition = this.getBoardPosition(x, y);
+        
+        // Check if clicked position contains a valid token move
+        if (this.isValidTokenClick(clickedPosition)) {
+            this.moveToken(clickedPosition);
+        }
+    }
+
+    handleResize() {
+        if (this.canvas && this.gameState.gameStarted) {
+            // Maintain aspect ratio while fitting the container
+            const container = this.canvas.parentElement;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const size = Math.min(containerWidth, containerHeight, 600);
+            
+            this.canvas.width = size;
+            this.canvas.height = size;
+            this.renderBoard();
+        }
+    }
+
+    renderBoard() {
+        if (!this.canvas || !this.gameState.gameStarted) return;
+
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw board background
+        this.drawBoard();
+
+        // Draw tokens
+        this.drawTokens();
+
+        // Draw current roll if any
+        if (this.gameState.boardState.lastRoll) {
+            this.drawDice(this.gameState.boardState.lastRoll);
+        }
+    }
+
+    drawBoard() {
+        // Draw the Ludo board layout
+        // Implementation depends on specific board design
+    }
+
+    drawTokens() {
+        // Draw all player tokens on the board
+        Object.entries(this.gameState.boardState.tokens).forEach(([playerId, tokenData]) => {
+            const player = this.gameState.players.find(p => p.id === playerId);
+            tokenData.positions.forEach((position, index) => {
+                this.drawToken(position, player.color);
+            });
         });
     }
 
-    drawSnake(start, end) {
-        const startPos = this.getPositionFromNumber(start);
-        const endPos = this.getPositionFromNumber(end);
-        
+    drawToken(position, color) {
+        const {x, y} = this.getTokenCoordinates(position);
         this.ctx.beginPath();
-        this.ctx.strokeStyle = "red";
-        this.ctx.lineWidth = 3;
-        this.ctx.moveTo(startPos.x, startPos.y);
-        this.ctx.lineTo(endPos.x, endPos.y);
+        this.ctx.arc(x, y, 10, 0, Math.PI * 2);
+        this.ctx.fillStyle = color;
+        this.ctx.fill();
+        this.ctx.strokeStyle = 'black';
         this.ctx.stroke();
     }
 
-    drawLadder(start, end) {
-        const startPos = this.getPositionFromNumber(start);
-        const endPos = this.getPositionFromNumber(end);
-        
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = "green";
-        this.ctx.lineWidth = 3;
-        this.ctx.moveTo(startPos.x, startPos.y);
-        this.ctx.lineTo(endPos.x, endPos.y);
-        this.ctx.stroke();
+    drawDice(value) {
+        const size = 40;
+        const x = this.canvas.width - 60;
+        const y = this.canvas.height - 60;
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillRect(x, y, size, size);
+        this.ctx.strokeStyle = 'black';
+        this.ctx.strokeRect(x, y, size, size);
+
+        this.ctx.fillStyle = 'black';
+        this.ctx.font = '24px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(value.toString(), x + size/2, y + size/2);
     }
 
-    getPositionFromNumber(number) {
-        const cellSize = this.boardSize / 10;
-        const row = Math.floor((number - 1) / 10);
-        const col = (number - 1) % 10;
+    animateDiceRoll(finalValue) {
+        // Implement dice roll animation
+        this.drawDice(finalValue);
+    }
+
+    highlightValidMoves(roll) {
+        // Highlight valid moves on the board
+        const currentPlayer = this.gameState.players[this.gameState.currentTurn];
+        const playerTokens = this.gameState.boardState.tokens[currentPlayer.id];
+        
+        playerTokens.positions.forEach((pos, index) => {
+            if (this.gameState.isValidMove(currentPlayer.id, index, pos + roll)) {
+                const {x, y} = this.getTokenCoordinates(pos + roll);
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 15, 0, Math.PI * 2);
+                this.ctx.strokeStyle = 'yellow';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+        });
+    }
+
+    getTokenCoordinates(position) {
+        // Convert board position to canvas coordinates
+        // Implementation depends on board layout
+        const gridSize = this.canvas.width / 15;
         return {
-            x: col * cellSize + cellSize/2,
-            y: (9 - row) * cellSize + cellSize/2
+            x: (position % 15) * gridSize + gridSize/2,
+            y: Math.floor(position / 15) * gridSize + gridSize/2
         };
+    }
+
+    getBoardPosition(x, y) {
+        // Convert canvas coordinates to board position
+        const gridSize = this.canvas.width / 15;
+        return {
+            x: Math.floor(x / gridSize),
+            y: Math.floor(y / gridSize)
+        };
+    }
+
+    isValidTokenClick(position) {
+        // Check if clicked position contains a valid token move
+        const currentPlayer = this.gameState.players[this.gameState.currentTurn];
+        return this.gameState.boardState.tokens[currentPlayer.id].positions.some(
+            (pos, index) => this.gameState.isValidMove(currentPlayer.id, index, position)
+        );
+    }
+
+    moveToken(position) {
+        // Handle token movement
+        const currentPlayer = this.gameState.players[this.gameState.currentTurn];
+        const tokenIndex = this.gameState.boardState.tokens[currentPlayer.id].positions.findIndex(
+            pos => this.gameState.isValidMove(currentPlayer.id, pos, position)
+        );
+
+        if (tokenIndex !== -1) {
+            this.gameState.moveToken(currentPlayer.id, tokenIndex);
+            this.renderBoard();
+
+            // Check for game over
+            const gameOver = this.gameState.checkGameOver();
+            if (gameOver) {
+                this.handleGameOver(gameOver);
+            }
+        }
+    }
+
+    handleGameOver(result) {
+        const message = `Game Over! ${result.winner === 'currentPlayer' ? 'You' : 'Player'} won ${result.reward} Pi!`;
+        alert(message);
+        
+        document.getElementById('game-board').classList.add('hidden');
+        document.getElementById('game-selection').classList.remove('hidden');
+        this.gameState.gameStarted = false;
     }
 }
 
-// Initialize UI controller
-const gameUI = new GameUI();
-
-// Add event listeners
-document.querySelector(".play-ludo").addEventListener("click", () => {
-    document.getElementById("game-selection").classList.add("hidden");
-    document.getElementById("game-board").classList.remove("hidden");
-    gameUI.initializeLudoBoard();
-});
-
-document.querySelector(".play-snake-ladder").addEventListener("click", () => {
-    document.getElementById("game-selection").classList.add("hidden");
-    document.getElementById("game-board").classList.remove("hidden");
-    gameUI.initializeSnakeLadderBoard();
+// Initialize UI Controller when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const uiController = new UIController(gameState);
 });
