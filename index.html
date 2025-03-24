@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Ludo & Snake Ladder</title>
+    <!-- Add Tailwind CSS via CDN with SRI hash for security -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Add Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Add Pi Network SDK -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .hidden {
+            display: none;
+        }
+        #gameCanvas {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="game-container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="text-center py-12">
+            <h1 class="text-4xl font-bold mb-8">Pi Ludo & Snake Ladder</h1>
+            <button id="authenticate" class="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform">
+                <i class="fas fa-sign-in-alt mr-2"></i>
+                Authenticate with Pi Network
+            </button>
+        </div>
+
+        <!-- Game Selection -->
+        <div id="game-selection" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <!-- Ludo Card -->
+                <div class="bg-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition-transform text-gray-800">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-dice mr-2 text-blue-500"></i>
+                        Ludo
+                    </h2>
+                    <div class="mb-4 space-y-2">
+                        <p class="text-gray-600"><i class="fas fa-coins mr-2"></i>Entry Fee: 0.5 Pi</p>
+                        <p class="text-gray-600"><i class="fas fa-users mr-2"></i>Players: 4</p>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-sm font-semibold text-gray-700">Rewards:</p>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fas fa-trophy text-yellow-500 mr-2"></i>4 tokens home: 0.5 Pi</li>
+                            <li><i class="fas fa-medal text-silver-500 mr-2"></i>3 tokens home: 0.4 Pi</li>
+                            <li><i class="fas fa-award text-bronze-500 mr-2"></i>2 tokens home: 0.3 Pi</li>
+                            <li><i class="fas fa-star mr-2"></i>1 token home: 0.2 Pi</li>
+                            <li><i class="fas fa-heart mr-2"></i>0 tokens: 0.1 Pi</li>
+                        </ul>
+                    </div>
+                    <button class="play-ludo mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full">
+                        <i class="fas fa-play mr-2"></i>Play Now
+                    </button>
+                </div>
+
+                <!-- Snake & Ladder Card -->
+                <div class="bg-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition-transform text-gray-800">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-snake mr-2 text-green-500"></i>
+                        Snake & Ladder
+                    </h2>
+                    <div class="mb-4 space-y-2">
+                        <p class="text-gray-600"><i class="fas fa-coins mr-2"></i>Entry Fee: 0.5 Pi</p>
+                        <p class="text-gray-600"><i class="fas fa-users mr-2"></i>Players: 4</p>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-sm font-semibold text-gray-700">Rewards:</p>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fas fa-trophy text-yellow-500 mr-2"></i>1st Place: 0.5 Pi</li>
+                            <li><i class="fas fa-medal text-silver-500 mr-2"></i>2nd Place: 0.3 Pi</li>
+                            <li><i class="fas fa-award text-bronze-500 mr-2"></i>3rd Place: 0.2 Pi</li>
+                            <li><i class="fas fa-star mr-2"></i>4th Place: 0.1 Pi</li>
+                        </ul>
+                    </div>
+                    <button class="play-snake-ladder mt-6 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full">
+                        <i class="fas fa-play mr-2"></i>Play Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Board Container -->
+        <div id="game-board" class="hidden mt-8">
+            <canvas id="gameCanvas" class="mx-auto"></canvas>
+            <div class="flex justify-center mt-4 space-x-4">
+                <button id="roll-dice" class="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-full">
+                    <i class="fas fa-dice mr-2"></i>Roll Dice
+                </button>
+                <button id="leave-game" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">
+                    <i class="fas fa-door-open mr-2"></i>Leave Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="pi-integration.js"></script>
+    <script src="game-logic.js"></script>
+    <script src="ui-controller.js"></script>
+</body>
+</html>
