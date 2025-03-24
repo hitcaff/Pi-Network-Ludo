@@ -20,20 +20,6 @@ A blockchain-based multiplayer board game built on the Pi Network platform. Play
   - Interactive game board
   - Dice rolling mechanics
 
-## Rewards Structure
-
-### Ludo
-- 4 tokens home: 0.5 Pi
-- 3 tokens home: 0.4 Pi
-- 2 tokens home: 0.3 Pi
-- 1 token home: 0.2 Pi
-- 0 tokens: 0.1 Pi
-
-### Snake & Ladder
-- 1st Place: 0.5 Pi
-- 2nd Place: 0.3 Pi
-- 3rd Place: 0.2 Pi
-- 4th Place: 0.1 Pi
 
 ## How to Play
 
