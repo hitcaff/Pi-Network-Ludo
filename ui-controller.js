@@ -11,10 +11,78 @@ class UIController {
     }
 
     setupEventListeners() {
+        // Game mode selection
+        document.getElementById('practice-mode').addEventListener('click', () => {
+            document.getElementById('practice-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('multiplayer-mode').addEventListener('click', () => {
+            document.getElementById('pool-selection').classList.remove('hidden');
+        });
+
+        // Practice mode setup
+        document.querySelectorAll('.ai-count-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('.ai-count-btn').forEach(btn => btn.classList.remove('bg-blue-700'));
+                e.target.classList.add('bg-blue-700');
+            });
+        });
+
+        document.querySelectorAll('.ai-difficulty-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('.ai-difficulty-btn').forEach(btn => btn.classList.remove('ring-2'));
+                e.target.classList.add('ring-2', 'ring-white');
+            });
+        });
+
+        document.getElementById('start-practice').addEventListener('click', () => {
+            const selectedCount = document.querySelector('.ai-count-btn.bg-blue-700')?.dataset.count || '3';
+            const selectedDifficulty = document.querySelector('.ai-difficulty-btn.ring-2')?.dataset.difficulty || 'medium';
+            
+            this.startPracticeGame(parseInt(selectedCount), selectedDifficulty);
+            document.getElementById('practice-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-practice-modal').addEventListener('click', () => {
+            document.getElementById('practice-modal').classList.add('hidden');
+        });
+
+        // Room management
+        document.getElementById('create-room').addEventListener('click', () => {
+            const roomName = document.getElementById('room-name').value.trim();
+            if (roomName) {
+                this.createRoom(roomName);
+            } else {
+                piNetwork.showError('Please enter a room name');
+            }
+        });
+
+        document.getElementById('join-room').addEventListener('click', () => {
+            const roomName = document.getElementById('room-name').value.trim();
+            if (roomName) {
+                this.joinRoom(roomName);
+            } else {
+                piNetwork.showError('Please enter a room name');
+            }
+        });
+
+        document.getElementById('close-room-modal').addEventListener('click', () => {
+            document.getElementById('room-modal').classList.add('hidden');
+        });
+
         // Pool selection
         document.querySelectorAll('.play-pool').forEach(button => {
             const poolType = button.dataset.pool;
             button.addEventListener('click', () => this.handlePoolSelection(poolType));
+        });
+
+        // Player count selection
+        document.querySelectorAll('.player-count-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('.player-count-btn').forEach(btn => btn.classList.remove('bg-blue-700'));
+                e.target.classList.add('bg-blue-700');
+                this.showRoomModal();
+            });
         });
 
         // Slider navigation
@@ -52,6 +120,56 @@ class UIController {
 
         // Window resize
         window.addEventListener('resize', () => this.handleResize());
+    }
+
+    showRoomModal() {
+        document.getElementById('room-modal').classList.remove('hidden');
+    }
+
+    async createRoom(roomName) {
+        // Here you would integrate with your backend
+        console.log('Creating room:', roomName);
+        // For now, just start the game
+        this.startMultiplayerGame(roomName);
+    }
+
+    async joinRoom(roomName) {
+        // Here you would integrate with your backend
+        console.log('Joining room:', roomName);
+        // For now, just start the game
+        this.startMultiplayerGame(roomName);
+    }
+
+    startPracticeGame(aiCount, difficulty) {
+        const options = {
+            playerCount: aiCount + 1,
+            aiCount: aiCount,
+            aiDifficulty: difficulty,
+            isPracticeMode: true
+        };
+
+        this.gameState.startGame(options);
+        document.getElementById('game-selection').classList.add('hidden');
+        document.getElementById('game-board').classList.remove('hidden');
+        this.initializeGame();
+    }
+
+    startMultiplayerGame(roomName) {
+        const playerCount = document.querySelector('.player-count-btn.bg-blue-700')?.dataset.count || '4';
+        const poolType = this.gameState.currentPool;
+
+        const options = {
+            poolType: poolType,
+            playerCount: parseInt(playerCount),
+            roomName: roomName,
+            isPracticeMode: false
+        };
+
+        this.gameState.startGame(options);
+        document.getElementById('room-modal').classList.add('hidden');
+        document.getElementById('game-selection').classList.add('hidden');
+        document.getElementById('game-board').classList.remove('hidden');
+        this.initializeGame();
     }
 
     async handlePoolSelection(poolType) {
@@ -128,7 +246,33 @@ class UIController {
         const roll = this.gameState.rollDice();
         if (roll) {
             this.animateDiceRoll(roll);
-            this.highlightValidMoves(roll);
+
+            const currentPlayer = this.gameState.players[this.gameState.currentTurn];
+            
+            if (currentPlayer.isAI) {
+                // AI's turn
+                setTimeout(() => {
+                    const tokenIndex = this.gameState.calculateAIMove(currentPlayer.id);
+                    if (tokenIndex !== null) {
+                        const tokenPos = this.gameState.boardState.tokens[currentPlayer.id].positions[tokenIndex];
+                        const newPos = tokenPos + roll;
+                        this.moveToken({
+                            x: Math.floor(newPos % 15),
+                            y: Math.floor(newPos / 15)
+                        });
+                    } else {
+                        // AI has no valid moves, skip turn
+                        this.gameState.currentTurn = (this.gameState.currentTurn + 1) % this.gameState.players.length;
+                        if (this.gameState.players[this.gameState.currentTurn].isAI) {
+                            // If next player is AI, trigger their turn
+                            setTimeout(() => this.handleDiceRoll(), 1000);
+                        }
+                    }
+                }, 1000); // Delay AI move by 1 second
+            } else {
+                // Human player's turn
+                this.highlightValidMoves(roll);
+            }
         }
     }
 

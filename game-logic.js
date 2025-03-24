@@ -6,6 +6,9 @@ class GameState {
         this.players = [];
         this.currentTurn = 0;
         this.gameStarted = false;
+        this.isPracticeMode = false;
+        this.aiDifficulty = 'medium';
+        this.roomName = null;
         this.poolRewards = {
             'bronze': {
                 entry: 0.5,
@@ -100,12 +103,24 @@ class GameState {
     }
 
     // Initialize a new game
-    startGame(poolType, players) {
+    startGame(options) {
+        const {
+            poolType = null,
+            playerCount = 4,
+            aiCount = 0,
+            aiDifficulty = 'medium',
+            roomName = null,
+            isPracticeMode = false
+        } = options;
+
         this.currentPool = poolType;
-        this.players = players;
+        this.isPracticeMode = isPracticeMode;
+        this.aiDifficulty = aiDifficulty;
+        this.roomName = roomName;
+        this.players = [];
         this.currentTurn = 0;
         this.gameStarted = true;
-        
+
         // Initialize game board state
         this.boardState = {
             tokens: {},
@@ -113,8 +128,38 @@ class GameState {
             lastRoll: null
         };
 
+        // Add human player
+        this.players.push({
+            id: 'currentPlayer',
+            name: 'You',
+            color: 'red',
+            isAI: false
+        });
+
+        // Add other players (AI or empty slots for multiplayer)
+        for (let i = 1; i < playerCount; i++) {
+            if (i < aiCount + 1) {
+                // Add AI player
+                this.players.push({
+                    id: `ai_${i}`,
+                    name: `AI Player ${i}`,
+                    color: ['green', 'yellow', 'blue'][i - 1],
+                    isAI: true,
+                    difficulty: aiDifficulty
+                });
+            } else {
+                // Add empty slot for potential human player
+                this.players.push({
+                    id: `player_${i}`,
+                    name: `Player ${i + 1}`,
+                    color: ['green', 'yellow', 'blue'][i - 1],
+                    isAI: false
+                });
+            }
+        }
+
         // Initialize tokens for each player
-        players.forEach(player => {
+        this.players.forEach(player => {
             this.boardState.tokens[player.id] = {
                 positions: [0, 0, 0, 0], // 4 tokens starting at home
                 tokensHome: 0
@@ -122,6 +167,141 @@ class GameState {
         });
 
         return this.boardState;
+    }
+
+    // AI move calculation
+    calculateAIMove(playerId) {
+        const player = this.players.find(p => p.id === playerId);
+        if (!player || !player.isAI) return null;
+
+        const tokens = this.boardState.tokens[playerId];
+        const roll = this.boardState.lastRoll;
+        
+        // Different strategies based on difficulty
+        switch (player.difficulty) {
+            case 'easy':
+                return this.calculateEasyAIMove(tokens, roll);
+            case 'medium':
+                return this.calculateMediumAIMove(tokens, roll);
+            case 'hard':
+                return this.calculateHardAIMove(tokens, roll);
+            default:
+                return this.calculateMediumAIMove(tokens, roll);
+        }
+    }
+
+    calculateEasyAIMove(tokens, roll) {
+        // Simple strategy: Move the first valid token
+        for (let i = 0; i < tokens.positions.length; i++) {
+            if (this.isValidMove(tokens.positions[i], roll)) {
+                return i;
+            }
+        }
+        return null;
+    }
+
+    calculateMediumAIMove(tokens, roll) {
+        // Medium strategy: Prefer tokens that can reach home or avoid being captured
+        let bestMove = null;
+        let bestScore = -1;
+
+        tokens.positions.forEach((pos, index) => {
+            if (!this.isValidMove(pos, roll)) return;
+
+            let score = 0;
+            const newPos = pos + roll;
+
+            // Prefer moves that reach home
+            if (this.hasReachedHome(newPos)) score += 100;
+            
+            // Prefer moves that avoid being captured
+            if (this.isTokenSafe(newPos)) score += 50;
+
+            // Prefer moving tokens closer to home
+            score += newPos;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = index;
+            }
+        });
+
+        return bestMove;
+    }
+
+    calculateHardAIMove(tokens, roll) {
+        // Hard strategy: Consider multiple factors and look ahead
+        let bestMove = null;
+        let bestScore = -1;
+
+        tokens.positions.forEach((pos, index) => {
+            if (!this.isValidMove(pos, roll)) return;
+
+            let score = 0;
+            const newPos = pos + roll;
+
+            // Reaching home is highest priority
+            if (this.hasReachedHome(newPos)) score += 1000;
+            
+            // Safety is second priority
+            if (this.isTokenSafe(newPos)) score += 500;
+
+            // Consider capturing opponent tokens
+            if (this.canCapture(newPos)) score += 300;
+
+            // Consider blocking opponent tokens
+            if (this.canBlock(newPos)) score += 200;
+
+            // Progress towards home
+            score += (newPos / 57) * 100;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = index;
+            }
+        });
+
+        return bestMove;
+    }
+
+    isTokenSafe(position) {
+        // Check if token is on a safe square or with another token
+        return position === 0 || // Home
+               position === 57 || // Final square
+               this.isSafeSquare(position) || // Safe squares
+               this.hasOwnTokenOnSquare(position); // Stacked tokens
+    }
+
+    isSafeSquare(position) {
+        // Define safe squares (e.g., starting squares, star squares)
+        const safeSquares = [1, 9, 14, 22, 27, 35, 40, 48];
+        return safeSquares.includes(position);
+    }
+
+    canCapture(position) {
+        // Check if moving to this position would capture an opponent's token
+        return Object.entries(this.boardState.tokens)
+            .some(([playerId, tokens]) => {
+                if (playerId === this.currentTurn) return false;
+                return tokens.positions.some(pos => pos === position && !this.isTokenSafe(pos));
+            });
+    }
+
+    canBlock(position) {
+        // Check if this position would block opponent's tokens
+        return Object.entries(this.boardState.tokens)
+            .some(([playerId, tokens]) => {
+                if (playerId === this.currentTurn) return false;
+                return tokens.positions.some(pos => 
+                    pos < position && pos + 6 >= position && !this.isTokenSafe(pos)
+                );
+            });
+    }
+
+    hasOwnTokenOnSquare(position) {
+        // Check if player has another token on this square
+        const currentTokens = this.boardState.tokens[this.currentTurn];
+        return currentTokens.positions.filter(pos => pos === position).length > 1;
     }
 
     // Handle dice roll

@@ -122,8 +122,44 @@
                 <p class="text-sm text-gray-300">Level up every 20 tokens brought home!</p>
             </div>
 
-            <!-- Pool Selection -->
-            <div class="pool-container-wrapper max-w-6xl mx-auto">
+            <!-- Game Mode Selection -->
+            <div class="max-w-md mx-auto mb-8 bg-white/10 rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4 text-center">Select Game Mode</h3>
+                
+                <!-- Practice Mode -->
+                <div class="mb-6">
+                    <button id="practice-mode" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-xl mb-2">
+                        <i class="fas fa-robot mr-2"></i>Practice Mode (Free)
+                    </button>
+                    <p class="text-sm text-gray-300 text-center">Play against AI opponents - No entry fee</p>
+                </div>
+
+                <!-- Multiplayer Mode -->
+                <div>
+                    <button id="multiplayer-mode" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl mb-2">
+                        <i class="fas fa-users mr-2"></i>Multiplayer Mode
+                    </button>
+                    <p class="text-sm text-gray-300 text-center">Play against real players - Entry fee required</p>
+                </div>
+            </div>
+
+            <!-- Pool Selection (Initially Hidden) -->
+            <div id="pool-selection" class="hidden">
+                <!-- Player Count Selection -->
+                <div class="max-w-md mx-auto mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-center">Number of Players</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button class="player-count-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl" data-count="2">
+                            <i class="fas fa-user-friends mr-2"></i>2 Players
+                        </button>
+                        <button class="player-count-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl" data-count="4">
+                            <i class="fas fa-users mr-2"></i>4 Players
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pool Selection -->
+                <div class="pool-container-wrapper max-w-6xl mx-auto">
                 <button class="slide-button left" id="slide-left">
                     <i class="fas fa-chevron-left"></i>
                 </button>
@@ -307,6 +343,65 @@
                 <button id="leave-game" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">
                     <i class="fas fa-door-open mr-2"></i>Leave Game
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div id="room-modal" class="hidden">
+        <div class="modal-overlay"></div>
+        <div class="pool-access-modal text-white">
+            <h3 class="text-2xl font-bold mb-4 text-center">Join or Create Room</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Room Name</label>
+                    <input type="text" id="room-name" class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-500" placeholder="Enter room name">
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button id="create-room" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fas fa-plus mr-2"></i>Create
+                    </button>
+                    <button id="join-room" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Join
+                    </button>
+                    <button id="close-room-modal" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Practice Mode Modal -->
+    <div id="practice-modal" class="hidden">
+        <div class="modal-overlay"></div>
+        <div class="pool-access-modal text-white">
+            <h3 class="text-2xl font-bold mb-4 text-center">Practice Mode Setup</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Number of AI Players</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="ai-count-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg" data-count="1">1 AI</button>
+                        <button class="ai-count-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg" data-count="2">2 AI</button>
+                        <button class="ai-count-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg" data-count="3">3 AI</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">AI Difficulty</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="ai-difficulty-btn bg-green-700 hover:bg-green-600 text-white font-bold py-2 rounded-lg" data-difficulty="easy">Easy</button>
+                        <button class="ai-difficulty-btn bg-yellow-700 hover:bg-yellow-600 text-white font-bold py-2 rounded-lg" data-difficulty="medium">Medium</button>
+                        <button class="ai-difficulty-btn bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-lg" data-difficulty="hard">Hard</button>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-4 mt-6">
+                    <button id="start-practice" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fas fa-play mr-2"></i>Start Game
+                    </button>
+                    <button id="close-practice-modal" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
